@@ -3,6 +3,22 @@
 TOP_N=100
 SINGLE_FORMAT_FILE=tmp/single.tmp
 
+# Individual entities can be extracted as follows:
+## BRCA2
+#create_single_file 675 genes human
+## TP53
+#create_single_file 7157 genes human
+## cancer
+#create_single_file 'DOID:162' terms_do
+## breast cancer
+#create_single_file 'DOID:1612' terms_do
+## kidney cancer
+#create_single_file 'DOID:263' terms_do
+## tonsillitis
+#create_single_file 'DOID:10456' terms_do
+## common cold
+#create_single_file 'DOID:10459' terms_do
+
 rm -f $SINGLE_FORMAT_FILE $SINGLE_FORMAT_FILE.tmp
 
 create_single_file() {
@@ -10,7 +26,10 @@ create_single_file() {
 	CATEGORY=$2
 
 	for results in opacmo_data/*__yoctogi_$CATEGORY.tsv ; do
-		<$results grep -E "^[0-9]+	[^	]*	$TERM	" | cut -f 1,2 | sort -k 1,1 >> $SINGLE_FORMAT_FILE.tmp
+		<$results grep -E "^[0-9]+	[^	]*	$TERM	" \
+			| cut -f 1,2,3 \
+			| awk -F '	' '{ print $1"\t"$2" ("$3")" }' \
+			| sort -k 1,1 >> $SINGLE_FORMAT_FILE.tmp
 	done
 }
 
@@ -39,8 +58,9 @@ get_top_n() {
 				STDIN.each_line { |gene|
 					puts gene if accepted_genes.has_key?(gene)
 				}
-			' | head -n $N > tmp/top_${N}_$CATEGORY.tmp
-		rm -f tmp/entrez_genes.human
+			' > tmp/top_${N}_$CATEGORY.tmp2
+		<tmp/top_${N}_$CATEGORY.tmp2 head -n $N > tmp/top_${N}_$CATEGORY.tmp
+		rm -f tmp/entrez_genes.human tmp/top_${N}_$CATEGORY.tmp2
 	else
 		head -n $N tmp/top_${N}_$CATEGORY.tmp.tmp > tmp/top_${N}_$CATEGORY.tmp
 	fi
@@ -65,26 +85,7 @@ done
 sort $SINGLE_FORMAT_FILE.tmp | uniq > $SINGLE_FORMAT_FILE
 rm -f $SINGLE_FORMAT_FILE.tmp
 
-exit
+<analysis/hypothesis_testing.r R --no-save
 
-# BRCA2
-create_single_file 675 genes human
-
-# TP53
-create_single_file 7157 genes human
-
-# cancer
-create_single_file 'DOID:162' terms_do
-
-# breast cancer
-create_single_file 'DOID:1612' terms_do
-
-# kidney cancer
-create_single_file 'DOID:263' terms_do
-
-# tonsillitis
-create_single_file 'DOID:10456' terms_do
-
-# common cold
-create_single_file 'DOID:10459' terms_do
+<tmp/rules.dot ruby analysis/dot2tsv.rb > tmp/rules.tsv
 
