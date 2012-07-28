@@ -176,22 +176,30 @@ denormalize=0
 # one column.
 lowercase=0
 
+# When using Amazon EC2, then start instances with this AMI:
+ami=ami-aecd60c7
+
 if [[ $# -eq 2 ]] ; then
 	prefix=$2
 fi
 
-if [ "$1" = 'all' ] || [ "$1" = 'freeze' ] || [ "$1" = 'bundle' ] ; then
+if [ "$1" = 'ec2' ] ; then
+	# TODO Check if ec2 dir present
+	EC2_HOME=`pwd`/`ls | grep 'ec2-api-tools-'`
+fi
+
+if [ "$1" = 'all' ] || [ "$1" = 'freeze' ] || [ "$1" = 'bundle' ] || [ "$1" = 'ec2' ] ; then
 	touch STATE_FREEZE
 	echo "Freezing current version information..."
 
 	cd bioknack
-	git show-ref --head > ../BIOKNACK_REF
-	git diff > ../BIOKNACK_DIFF
+	git show-ref --head > ../VERSION_BIOKNACK_REF
+	git diff > ../VERSION_BIOKNACK_DIFF
 	cd ..
 
 	cd opacmo
-	git show-ref --head > ../OPACMO_REF
-	git diff > ../OPACMO_DIFF
+	git show-ref --head > ../VERSION_OPACMO_REF
+	git diff > ../VERSION_OPACMO_DIFF
 	cd ..
 
 	bash -version > VERSION_BASH
@@ -206,9 +214,16 @@ if [ "$1" = 'sge' ] ; then
 	rm -f STATE_FREEZE
 fi
 
+if [ "$1" = 'ec2' ] ; then
+	touch STATE_FREEZE
+	ls | grep 'ec2-api-tools-' > VERSION_EC2_TOOLS
+	echo "$ami" > VERSION_AMI
+	rm -f STATE_FREEZE
+fi
+
 if [ "$1" = 'all' ] || [ "$1" = 'get' ] || [ "$1" = 'bundle' ] ; then
 	touch STATE_GET
-	date > DATA_INFO
+	date > VERSION_DATA_INFO
 	mkdir input dictionaries tmp
 	bk_ner_gn.sh minimal
 	bk_ner_gn.sh obo

@@ -45,6 +45,21 @@ Running `opacmo/make_opacmo.sh sge` requires up to 8GB memory for postprocessing
 
 Specific output of grid engine jobs is written into the respective `fork_*` directories as `opacmo.*.{e,o}*`. The actual text-mining output is written into the directory `opacmo_data`.
 
+### Running on Amazon Elastic Compute Cloud
+
+_Provisional_
+
+    wget 'http://s3.amazonaws.com/ec2-downloads/ec2-api-tools.zip'
+    unzip ec2-api-tools.zip
+
+#### Java Installation on Mac OS X
+
+    /usr/bin/java
+
+A dialogue will pop-up for installing Java Runtime Environment.
+
+    export JAVA_HOME="/System/Library/Java/JavaVirtualMachines/`ls /System/Library/Java/JavaVirtualMachines | grep '.jdk' | tail -n 1`"
+
 Database & Web-Server Set-Up
 ----------------------------
 

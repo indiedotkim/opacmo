@@ -1,6 +1,11 @@
+#!/usr/bin/ruby
+
 in_edge = false
 node = origin = destination = support = confidence = lift = ''
 nodes = {}
+
+puts "left-hand side\tright-hand side\tsupport\tconfidence\tlift"
+
 STDIN.each { |line|
 	line.chomp!.strip!
 
