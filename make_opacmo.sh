@@ -178,6 +178,8 @@ lowercase=0
 
 # When using Amazon EC2, then start instances with this AMI:
 ami=ami-aecd60c7
+ec2_keypair=opacmo
+ec2_securitygroup=playground
 
 if [[ $# -eq 2 ]] ; then
 	prefix=$2
@@ -219,6 +221,13 @@ if [ "$1" = 'ec2' ] ; then
 	ls | grep 'ec2-api-tools-' > VERSION_EC2_TOOLS
 	echo "$ami" > VERSION_AMI
 	rm -f STATE_FREEZE
+fi
+
+if [ "$1" = 'ec2' ] ; then
+	touch STATE_EC2_BOOT
+	./ec2-api-tools-1.6.0.0/bin/ec2-request-spot-instances -k $ec2_keypair -g $ec2_securitygroup -t m2.4xlarge -z us-east-1a -p 0.25 -b "/dev/sdb=ephemeral0" --user-data-file ec2/ec2.sh $ami
+	
+	rm -f STATE_EC2_BOOT
 fi
 
 if [ "$1" = 'all' ] || [ "$1" = 'get' ] || [ "$1" = 'bundle' ] ; then

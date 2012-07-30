@@ -52,13 +52,21 @@ _Provisional_
     wget 'http://s3.amazonaws.com/ec2-downloads/ec2-api-tools.zip'
     unzip ec2-api-tools.zip
 
+Configuring EC2 API Tools
+
+    export AWS_ACCESS_KEY=...
+    export AWS_SECRET_KEY=...
+    export EC2_PRIVATE_KEY=....pem
+
+
+
 #### Java Installation on Mac OS X
 
     /usr/bin/java
 
 A dialogue will pop-up for installing Java Runtime Environment.
 
-    export JAVA_HOME="/System/Library/Java/JavaVirtualMachines/`ls /System/Library/Java/JavaVirtualMachines | grep '.jdk' | tail -n 1`"
+    export JAVA_HOME=/usr
 
 Database & Web-Server Set-Up
 ----------------------------
