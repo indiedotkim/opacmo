@@ -7,7 +7,8 @@ nodes = {}
 puts "left-hand side\tright-hand side\tsupport\tconfidence\tlift"
 
 STDIN.each { |line|
-	line.chomp!.strip!
+	line.chomp!
+	line.strip!
 
 	if in_edge and line == '];' then
 		puts "#{nodes[origin]}\t#{nodes[destination]}\t#{support}\t#{confidence}\t#{lift}" if in_edge

@@ -85,7 +85,7 @@ done
 sort $SINGLE_FORMAT_FILE.tmp | uniq > $SINGLE_FORMAT_FILE
 rm -f $SINGLE_FORMAT_FILE.tmp
 
-<analysis/hypothesis_testing.r R --no-save
+<opacmo/analysis/hypothesis_testing.r R --no-save
 
-<tmp/rules.dot ruby analysis/dot2tsv.rb > tmp/rules.tsv
+<tmp/rules.dot ruby opacmo/analysis/dot2tsv.rb > tmp/rules.tsv
 
