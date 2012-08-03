@@ -1,7 +1,9 @@
 #!/bin/bash
 
-TOP_N=100
-SINGLE_FORMAT_FILE=tmp/single.tmp
+top_n=100
+single_format_file=tmp/single.tmp
+
+ruby_interpreter=ruby
 
 # Individual entities can be extracted as follows:
 ## BRCA2
@@ -19,7 +21,7 @@ SINGLE_FORMAT_FILE=tmp/single.tmp
 ## common cold
 #create_single_file 'DOID:10459' terms_do
 
-rm -f $SINGLE_FORMAT_FILE $SINGLE_FORMAT_FILE.tmp
+rm -f $single_format_file $single_format_file.tmp
 
 create_single_file() {
 	TERM=$1
@@ -29,7 +31,7 @@ create_single_file() {
 		<$results grep -E "^[0-9]+	[^	]*	$TERM	" \
 			| cut -f 1,2,3 \
 			| awk -F '	' '{ print $1"\t"$2" ("$3")" }' \
-			| sort -k 1,1 >> $SINGLE_FORMAT_FILE.tmp
+			| sort -k 1,1 >> $single_format_file.tmp
 	done
 }
 
@@ -75,17 +77,24 @@ for category in {'genes','terms_go','terms_do','terms_chebi'} ; do
 		filter=human
 	fi
 
-	get_top_n $TOP_N $category $filter
+	get_top_n $top_n $category $filter
 
-	for entity in `cat tmp/top_${TOP_N}_$category.tmp` ; do
+	for entity in `cat tmp/top_${top_n}_$category.tmp` ; do
 		create_single_file "$entity" $category
 	done
 done
 
-sort $SINGLE_FORMAT_FILE.tmp | uniq > $SINGLE_FORMAT_FILE
-rm -f $SINGLE_FORMAT_FILE.tmp
+sort $single_format_file.tmp | uniq > $single_format_file
+rm -f $single_format_file.tmp
 
 <opacmo/analysis/hypothesis_testing.r R --no-save
 
 <tmp/rules.dot ruby opacmo/analysis/dot2tsv.rb > tmp/rules.tsv
+
+<tmp/rules.tsv ruby opacmo/analysis/tsv2pairs.rb > tmp/rules_pairs.tsv
+
+grep -v -E '\([A-Z]+:[0-9]+\)' tmp/rules_pairs.tsv > tmp/rules_pairs_genes.tsv
+
+echo -e "# left-hand side gene symbol\tleft-hand side Entrez Gene ID\tright-hand side gene symbol\tright-hand side Entrez Gene ID\tavg. weighted support\tavg. weighted confidence\tavg. weighted lift\tavg. weight" > opacmo_data/gene_gene.tsv
+<tmp/rules_pairs_genes.tsv sed -r 's/ \(/	/g' | sed -r 's/\)	/	/g' | tail -n+2 >> opacmo_data/gene_gene.tsv
 
