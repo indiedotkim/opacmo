@@ -1,11 +1,11 @@
 library('arulesViz')
 
-min.number.of.occurrences <- 3
-proportion.of.transactions <- 0.95
-
 tr <- read.transactions("tmp/single.tmp", format = "single", cols = c(1,2), sep = "\t")
 
-rules <- apriori(tr, parameter=list(support = min.number.of.occurrences / length(tr), confidence = proportion.of.transactions, minlen = 2, maxlen = 4, target = 'rules'), control = list(memopt = TRUE))
+min.number.of.occurrences <- 3
+proportion.of.transactions <- 0
+
+rules <- apriori(tr, parameter = list(support = min.number.of.occurrences / length(tr), confidence = proportion.of.transactions, minlen = 2, maxlen = 2, target = 'rules'), control = list(memopt = TRUE))
 
 # subrules <- rules[quality(rules)$support >= 0.01]
 

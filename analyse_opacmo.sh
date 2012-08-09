@@ -1,6 +1,6 @@
 #!/bin/bash
 
-top_n=100
+top_n=100000
 single_format_file=tmp/single.tmp
 
 ruby_interpreter=ruby
@@ -52,7 +52,7 @@ get_top_n() {
 			| cut -f 2 -d '	' \
 			| cut -f 2 -d '|' \
 			| sort | uniq > tmp/entrez_genes.human
-		<tmp/top_${N}_$CATEGORY.tmp.tmp ruby -e '
+		<tmp/top_${N}_$CATEGORY.tmp.tmp $ruby_interpreter -e '
 				accepted_genes = {}
 				File.new("tmp/entrez_genes.human", "r").each_line { |gene|
 					accepted_genes[gene] = true
@@ -89,12 +89,15 @@ rm -f $single_format_file.tmp
 
 <opacmo/analysis/hypothesis_testing.r R --no-save
 
-<tmp/rules.dot ruby opacmo/analysis/dot2tsv.rb > tmp/rules.tsv
+<tmp/rules.dot $ruby_interpreter opacmo/analysis/dot2tsv.rb > tmp/rules.tsv
 
-<tmp/rules.tsv ruby opacmo/analysis/tsv2pairs.rb > tmp/rules_pairs.tsv
+# Will generate pairs from non-singleton association rule sets:
+# <tmp/rules.tsv $ruby_interpreter opacmo/analysis/tsv2pairs.rb > tmp/rules_pairs.tsv
 
-grep -v -E '\([A-Z]+:[0-9]+\)' tmp/rules_pairs.tsv > tmp/rules_pairs_genes.tsv
+grep -v -E '\([A-Z]+:[0-9]+\)' tmp/rules.tsv > tmp/rules_genes.tsv
 
-echo -e "# left-hand side gene symbol\tleft-hand side Entrez Gene ID\tright-hand side gene symbol\tright-hand side Entrez Gene ID\tavg. weighted support\tavg. weighted confidence\tavg. weighted lift\tavg. weight" > opacmo_data/gene_gene.tsv
-<tmp/rules_pairs_genes.tsv sed -r 's/ \(/	/g' | sed -r 's/\)	/	/g' | tail -n+2 >> opacmo_data/gene_gene.tsv
+echo -e "# left-hand side gene symbol\tleft-hand side Entrez Gene ID\tright-hand side gene symbol\tright-hand side Entrez Gene ID\tsupport\tconfidence\tlift" > opacmo_data/gene_gene_association_rules.tsv
+<tmp/rules_genes.tsv sed -r 's/ \(/	/g' | sed -r 's/\)	/	/g' | tail -n+2 >> opacmo_data/gene_gene_association_rules.tsv
+
+$ruby_interpreter opacmo/analysis/accumulate.rb > opacmo_data/gene_gene_co-occurrence.tsv
 

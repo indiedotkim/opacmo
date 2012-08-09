@@ -20,7 +20,7 @@ STDIN.each { |line|
 	confidence = columns[3].to_f
 	lift = columns[4].to_f
 
-	weight = 1.0 / (left_items.length + right_items.length)
+	weight = 1.0 / (left_items.length + right_items.length - 1)
 
 	left_items.each { |left|
 		right_items.each { |right|
