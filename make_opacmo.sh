@@ -19,7 +19,11 @@ if [ "$os" = 'Linux' ] ; then
 	sed_regexp=-r
 fi
 
+# Ruby is directly used by the opacmo pipeline and it is supported for plugins:
 ruby_interpreter=ruby
+
+# Python is not used by the opacmo pipeline, but it is supported for plugins:
+python_interpreter=python
 
 PATH=$PATH:./opacmo:./bioknack
 IFS=$(echo -e -n "\n\b")
@@ -124,6 +128,23 @@ check_dir() {
 	fi
 }
 
+run_plugins() {
+	joinpoint=$1
+	state=$2
+
+	for plugin in opacmo/plugins/${joinpoint}_${state}_*.{sh,rb,py} ; do
+		if [ -f "$plugin" ] ; then
+			if [ "${plugin##*.}" = 'sh' ] ; then
+				bash "$plugin"
+			elif [ "${plugin##*.}" = 'rb' ] ; then
+				$ruby_interpreter "$plugin"
+			elif [ "${plugin##*.}" = 'py' ] ; then
+				$python_interpreter "$plugin"
+			fi
+		fi
+	done
+}
+
 help_message() {
 	echo "Usage: make_opacmo.sh command [prefix]"
 	echo ""
@@ -158,7 +179,7 @@ if [[ $# -lt 1 ]] || [[ $# -gt 2 ]] ; then
 	exit 1
 fi
 
-if [ "$1" != 'all' ] && [ "$1" != 'freeze' ] && [ "$1" != 'get' ] && [ "$1" != 'dictionaries' ] && [ "$1" != 'ner' ] && [ "$1" != 'pner' ] && [ "$1" != 'tsv' ] && [ "$1" != 'labels' ] && [ "$1" != 'yoctogi' ]  && [ "$1" != 'bundle' ] && [ "$1" != 'sge' ]; then
+if [ "$1" != 'all' ] && [ "$1" != 'freeze' ] && [ "$1" != 'get' ] && [ "$1" != 'dictionaries' ] && [ "$1" != 'ner' ] && [ "$1" != 'pner' ] && [ "$1" != 'tsv' ] && [ "$1" != 'labels' ] && [ "$1" != 'yoctogi' ]  && [ "$1" != 'bundle' ] && [ "$1" != 'sge' ] && [ "$1" != 'pluginexample' ] ; then
 	help_message
 	exit 1
 fi
@@ -188,6 +209,15 @@ fi
 if [ "$1" = 'ec2' ] ; then
 	# TODO Check if ec2 dir present
 	EC2_HOME=`pwd`/`ls | grep 'ec2-api-tools-'`
+fi
+
+if [ "$1" = 'pluginexample' ] ; then
+	touch STATE_PLUGINEXAMPLE
+	echo "Running plugin examples..."
+
+	run_plugins pre pluginexample
+
+	rm -f STATE_PLUGINEXAMPLE
 fi
 
 if [ "$1" = 'all' ] || [ "$1" = 'freeze' ] || [ "$1" = 'bundle' ] || [ "$1" = 'ec2' ] ; then
