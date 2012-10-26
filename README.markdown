@@ -54,17 +54,24 @@ _Provisional_
 
 Configuring EC2 API Tools
 
+    export EC2_HOME=.../ec2-api-tools-1.6.0.0
+    # AWS_ACCESS_KEY looks like 'BUE920...', 20 characters
+    # AWS_SECRET_KEY looks like 'EsfW2R...', >20 characters
     export AWS_ACCESS_KEY=...
     export AWS_SECRET_KEY=...
-    export EC2_PRIVATE_KEY=....pem
-
+    export EC2_PRIVATE_KEY=pk-....pem
+    export EC2_CERT=cert-....pem
 
 
 #### Java Installation on Mac OS X
 
+Amazon's EC2 tools make use of Java, for which it is necessary to install a Java Runtime Environment on Mac OS X. The automatic installation process can be invoked by executing the following command line:
+
     /usr/bin/java
 
 A dialogue will pop-up for installing Java Runtime Environment.
+
+After installing the environment, the following shell variable needs to be set for the EC2 tools to work correctly:
 
     export JAVA_HOME=/usr
 

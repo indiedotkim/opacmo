@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Magic? No! It is for logging console output properly -- including output of this script!
+exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+
 # Use the ephemeral drive as workspace:
 chmod 777 /media/ephemeral0
 cd /media/ephemeral0
@@ -31,4 +34,10 @@ echo "https_proxy = http://localhost:3128/" >> /etc/wgetrc
 echo "http_proxy = http://localhost:3128/" >> /etc/wgetrc
 echo "ftp_proxy = http://localhost:3128/" >> /etc/wgetrc
 echo "use_proxy = on" >> /etc/wgetrc
+
+# Signal script completion:
+echo "---opacmo---bundle-complete---"
+
+# And now, wait forever:
+cat > /dev/null
 
