@@ -14,7 +14,14 @@ cd /media/ephemeral0
 #yum -y groupinstall 'Development Tools'
 #yum -y install readline-devel
 yum -y install ruby19
+yum -y install vsftpd
 yum -y install squid
+yum -y install git
+
+# Configure vsftpd:
+mkdir /media/ephemeral0/opacmo_data
+echo -e "anonymous_enable=YES\nanon_root=/media/ephemeral0/opacmo_data\nlocal_enable=YES\nwrite_enable=YES\nlocal_umask=022\nanon_upload_enable=YES\nanon_mkdir_write_enable=YES\nconnect_from_port_20=YES\nlisten=YES\npam_service_name=vsftpd\ntcp_wrappers=YES" > /etc/vsftpd/vsftpd.conf
+service vsftpd start
 
 # Configure squid:
 grep -v -E '^(maximum_object_size|cache_dir)' /etc/squid/squid.conf > squid.conf.tmp
@@ -35,8 +42,19 @@ echo "http_proxy = http://localhost:3128/" >> /etc/wgetrc
 echo "ftp_proxy = http://localhost:3128/" >> /etc/wgetrc
 echo "use_proxy = on" >> /etc/wgetrc
 
+# Get the text-mining pipeline software:
+mkdir /media/ephemeral0/pipeline
+cd /media/ephemeral0/pipeline
+git clone git://github.com/joejimbo/bioknack.git
+git clone git://github.com/joejimbo/opacmo.git
+
+# Download PMC OA corpus, dictionaries, ontologies, etc.:
+opacmo/make_opacmo.sh freeze | tee -a /media/ephemeral0/pipeline/CACHE_LOG
+opacmo/make_opacmo.sh get | tee -a /media/ephemeral0/pipeline/CACHE_LOG
+opacmo/make_opacmo.sh dictionaries | tee -a /media/ephemeral0/pipeline/CACHE_LOG
+
 # Signal script completion:
-echo "---opacmo---bundle-complete---"
+echo "---opacmo---cache-complete---" | tee -a /media/ephemeral0/pipeline/CACHE_LOG
 
 # And now, wait forever:
 cat > /dev/null

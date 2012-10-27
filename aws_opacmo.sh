@@ -2,14 +2,26 @@
 
 sed_regexp=-E
 
-# Number of seconds to wait between checks whether the "batcher" spot-instance is up:
+# Journal prefixes for the worker spot-instances that will be started (on top of the one "cache" spot-instance):
+WORKERS=(A C E)
+
+# AWS EC2 AMI to use:
+AMI=ami-1624987f
+
+# AWS EC2 zone in which the instances will be created:
+zone=us-east-1a
+
+# Number of seconds to wait between checks whether the "cache" spot-instance is up:
 SPOT_CHECK_INTERVAL=5
+
+# Number of seconds to wait between checks whether the "cache" spot-instance is done downloading:
+CACHE_CHECK_INTERVAL=60
 
 # Determine suitable price:
 N=0
 FACTOR=1.5
 AVG_PRICE=0.0
-ec2-describe-spot-price-history -H -t m1.large --product-description 'Linux/UNIX' | tail -n+2 | cut -f 2 -d '	' | sort -n > tmp/aws_prices.tmp
+ec2-describe-spot-price-history -t m1.large --product-description 'Linux/UNIX' | cut -f 2 -d '	' | sort -n > tmp/aws_prices.tmp
 for price in ` cat tmp/aws_prices.tmp` ; do
 	AVG_PRICE=`echo "$AVG_PRICE+$price" | bc`
 	let N=N+1
@@ -24,7 +36,7 @@ echo "Over $N reported prices, all zones (via 'ec2-describe-spot-price-history')
 echo "Average price: $AVG_PRICE"
 echo "Median price: $MEDIAN_PRICE"
 echo ""
-echo "Suggest max. price for opacmo run: $MAX_PRICE (${FACTOR}x median)"
+echo "Suggest max. price for opacmo run: $MAX_PRICE (${FACTOR}x median price)"
 
 echo -n "Type 'yes' (without the quotes) to accept: "
 read user_agreement
@@ -34,8 +46,19 @@ if [ "$user_agreement" != 'yes' ] ; then
 	exit 1
 fi
 
+TIMESTAMP=`date +%Y%m%d_%H%M`
+echo "Setting up 'opacmo_$TIMESTAMP' security group..."
+SECURITY_GROUP=`ec2-create-group --description 'opacmo security group' opacmo_$TIMESTAMP | cut -f 2 -d '	'`
+if [ "$SECURITY_GROUP" = '' ] ; then
+	echo "Could not create the security group 'opacmo' (via ec2-create-group). Does it already exist?"
+	exit 2
+fi
+echo "Security group 'opacmo_$TIMESTAMP' created: $SECURITY_GROUP"
+ec2-authorize $SECURITY_GROUP -p 22
+ec2-authorize $SECURITY_GROUP -o $SECURITY_GROUP -u $AWS_ACCOUNT_ID
+
 echo "Requesting spot instance (via ec2-request-spot-instances)..."
-SPOT_INSTANCE_REQUEST=`ec2-request-spot-instances -g opacmo -p $MAX_PRICE -t m1.large -b '/dev/sda2=ephemeral0' --user-data-file ec2/bundler.sh ami-1624987f | cut -f 2 -d '	'`
+SPOT_INSTANCE_REQUEST=`ec2-request-spot-instances -g opacmo_$TIMESTAMP -p $MAX_PRICE -k $AWS_KEY_PAIR -z $zone -t m1.large -b '/dev/sda2=ephemeral0' --user-data-file opacmo/ec2/cache.sh $AMI | cut -f 2 -d '	'`
 echo "Spot instance request filed: $SPOT_INSTANCE_REQUEST"
 
 echo "Waiting for instance to boot..."
@@ -48,5 +71,19 @@ done
 
 echo "Instance started: $INSTANCE"
 
-ec2-get-console-output $INSTANCE
+echo "Waiting for instance to download PMC corpus, dictionaries/ontologies, etc."
+DOWNLOAD_COMPLETE=0
+while [ "$DOWNLOAD_COMPLETE" = "" ] ; do
+	echo "...waiting..."
+	sleep $CACHE_CHECK_INTERVAL
+	DOWNLOAD_COMPLETE=`ec2-get-console-output $INSTANCE | grep -o 'user-data: ---opacmo---cache-complete---' | wc -l | tr -d ' '`
+done
+
+echo "Starting worker instances..."
+CACHE_IP=`ec2-describe-addresses | grep "	$INSTANCE	" | cut -f 2 -d '	'`
+for prefix in ${WORKERS[@]} ; do
+	echo "Starting worker for journal prefix: $prefix"
+	sed $sed_regexp "s/PREFIX_VAR/$prefix/g" opacmo/ec2/worker.sh | sed $sed_regexp "s/CACHE_IP_VAR/$CACHE_IP/g" > tmp/worker_$prefix.sh
+	ec2-request-spot-instances -g opacmo_$TIMESTAMP -p $MAX_PRICE -k $AWS_KEY_PAIR -z $zone -t m1.large -b '/dev/sda2=ephemeral0' --user-data-file tmp/worker_$prefix.sh $AMI
+done
 

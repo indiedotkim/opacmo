@@ -51,17 +51,25 @@ _Provisional_
 
     wget 'http://s3.amazonaws.com/ec2-downloads/ec2-api-tools.zip'
     unzip ec2-api-tools.zip
+    export PATH=$PATH:`pwd`/ec2-api-tools-1.6.0.0/bin
 
 Configuring EC2 API Tools
 
-    export EC2_HOME=.../ec2-api-tools-1.6.0.0
+    export EC2_HOME=`pwd`/ec2-api-tools-1.6.0.0
+    # See: https://portal.aws.amazon.com/gp/aws/securityCredentials
+    # AWS_ACCOUNT_ID looks like '1234-5678-9012'
     # AWS_ACCESS_KEY looks like 'BUE920...', 20 characters
     # AWS_SECRET_KEY looks like 'EsfW2R...', >20 characters
+    # AWS_KEY_PAIR lokks like 'somename', key-pair to use
+    export AWS_ACCOUNT_ID=...
     export AWS_ACCESS_KEY=...
     export AWS_SECRET_KEY=...
     export EC2_PRIVATE_KEY=pk-....pem
     export EC2_CERT=cert-....pem
 
+Executing the Text-Mining Pipeline
+
+    opacmo/aws_opacmo.sh
 
 #### Java Installation on Mac OS X
 
@@ -73,7 +81,7 @@ A dialogue will pop-up for installing Java Runtime Environment.
 
 After installing the environment, the following shell variable needs to be set for the EC2 tools to work correctly:
 
-    export JAVA_HOME=/usr
+    export JAVA_HOME=`/System/Library/Frameworks/JavaVM.framework/Versions/Current/Commands/java_home`
 
 Database & Web-Server Set-Up
 ----------------------------

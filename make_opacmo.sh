@@ -179,7 +179,7 @@ if [[ $# -lt 1 ]] || [[ $# -gt 2 ]] ; then
 	exit 1
 fi
 
-if [ "$1" != 'all' ] && [ "$1" != 'freeze' ] && [ "$1" != 'get' ] && [ "$1" != 'dictionaries' ] && [ "$1" != 'ner' ] && [ "$1" != 'pner' ] && [ "$1" != 'tsv' ] && [ "$1" != 'labels' ] && [ "$1" != 'yoctogi' ]  && [ "$1" != 'bundle' ] && [ "$1" != 'sge' ] && [ "$1" != 'pluginexample' ] ; then
+if [ "$1" != 'all' ] && [ "$1" != 'freeze' ] && [ "$1" != 'get' ] && [ "$1" != 'dictionaries' ] && [ "$1" != 'ner' ] && [ "$1" != 'pner' ] && [ "$1" != 'tsv' ] && [ "$1" != 'labels' ] && [ "$1" != 'yoctogi' ]  && [ "$1" != 'bundle' ] && [ "$1" != 'sge' ] && [ "$1" != 'ec2' ] && [ "$1" != 'pluginexample' ] ; then
 	help_message
 	exit 1
 fi
@@ -197,18 +197,14 @@ denormalize=0
 # one column.
 lowercase=0
 
-# When using Amazon EC2, then start instances with this AMI:
-ami=ami-aecd60c7
-ec2_keypair=opacmo
-ec2_securitygroup=playground
-
 if [[ $# -eq 2 ]] ; then
 	prefix=$2
 fi
 
 if [ "$1" = 'ec2' ] ; then
 	# TODO Check if ec2 dir present
-	EC2_HOME=`pwd`/`ls | grep 'ec2-api-tools-'`
+	# EC2_HOME=`pwd`/`ls | grep 'ec2-api-tools-'`
+	X=
 fi
 
 if [ "$1" = 'pluginexample' ] ; then
@@ -255,8 +251,7 @@ fi
 
 if [ "$1" = 'ec2' ] ; then
 	touch STATE_EC2_BOOT
-	./ec2-api-tools-1.6.0.0/bin/ec2-request-spot-instances -k $ec2_keypair -g $ec2_securitygroup -t m2.4xlarge -z us-east-1a -p 0.25 -b "/dev/sdb=ephemeral0" --user-data-file ec2/ec2.sh $ami
-	
+	aws_opacmo.sh
 	rm -f STATE_EC2_BOOT
 fi
 
