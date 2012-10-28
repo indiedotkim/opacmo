@@ -51,7 +51,6 @@ git clone git://github.com/joejimbo/opacmo.git
 # Download PMC OA corpus, dictionaries, ontologies, etc.:
 opacmo/make_opacmo.sh freeze | tee -a /media/ephemeral0/pipeline/CACHE_LOG
 opacmo/make_opacmo.sh get | tee -a /media/ephemeral0/pipeline/CACHE_LOG
-opacmo/make_opacmo.sh dictionaries | tee -a /media/ephemeral0/pipeline/CACHE_LOG
 
 # Signal script completion:
 echo "---opacmo---cache-complete---" | tee -a /media/ephemeral0/pipeline/CACHE_LOG
