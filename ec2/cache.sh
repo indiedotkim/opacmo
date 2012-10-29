@@ -1,22 +1,22 @@
 #!/bin/bash
 
+# Install:
+# - Ruby 1.9 for better multi-threading performance than Ruby 1.8
+# - squid for enabling downloads from this instance.
+yum -y install ruby19
+yum -y install vsftpd
+yum -y install squid
+yum -y install lighttpd
+yum -y install git
+
 # Magic? No! It is for logging console output properly -- including output of this script!
-exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+exec > >(tee /var/www/lighttpd/index.html|tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+
+service lighttpd start
 
 # Use the ephemeral drive as workspace:
 chmod 777 /media/ephemeral0
 cd /media/ephemeral0
-
-# Install:
-# - Ruby 1.9 for better multi-threading performance than Ruby 1.8
-# - squid for enabling downloads from this instance.
-# sudo yum install -y git
-#yum -y groupinstall 'Development Tools'
-#yum -y install readline-devel
-yum -y install ruby19
-yum -y install vsftpd
-yum -y install squid
-yum -y install git
 
 # Configure vsftpd:
 mkdir /media/ephemeral0/opacmo_data

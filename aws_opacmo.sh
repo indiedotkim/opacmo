@@ -58,6 +58,7 @@ if [ "$SECURITY_GROUP" = '' ] ; then
 fi
 echo "Security group 'opacmo_$TIMESTAMP' created: $SECURITY_GROUP"
 ec2-authorize $SECURITY_GROUP -p 22
+ec2-authorize $SECURITY_GROUP -p 80
 ec2-authorize $SECURITY_GROUP -o $SECURITY_GROUP -u $AWS_ACCOUNT_ID
 
 echo "Requesting spot instance (via ec2-request-spot-instances)..."
