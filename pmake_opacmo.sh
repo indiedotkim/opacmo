@@ -1,6 +1,7 @@
 #!/bin/bash
 
 environment=$1
+prefix=$2
 
 # Number of publications that should be grouped together into a batch. A batch
 # contains the publications that are processed by a NER task.
@@ -50,7 +51,8 @@ if [ -d batches ] ; then rm -rf batches ; fi
 mkdir batches
 let batch=0
 let documents_in_batch=0
-for journal in input/* ; do
+echo 'Creating batches for parallel processing...'
+for journal in input/$prefix ; do
 	if [ ! -d "$journal" ] ; then continue ; fi
 
 	for document in $journal/* ; do

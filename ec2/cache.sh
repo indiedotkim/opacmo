@@ -9,10 +9,16 @@ yum -y install squid
 yum -y install lighttpd
 yum -y install git
 
+rm /var/www/lighttpd/*
+chmod 777 /var/www/lighttpd
+
 # Magic? No! It is for logging console output properly -- including output of this script!
-exec > >(tee /var/www/lighttpd/index.html|tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+exec > >(tee /var/www/lighttpd/log.txt|tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
 service lighttpd start
+
+# Signal that the server is running:
+echo "---opacmo---setup-complete---" | tee -a /media/ephemeral0/pipeline/CACHE_LOG
 
 # Use the ephemeral drive as workspace:
 chmod 777 /media/ephemeral0
@@ -45,8 +51,10 @@ echo "use_proxy = on" >> /etc/wgetrc
 # Get the text-mining pipeline software:
 mkdir /media/ephemeral0/pipeline
 cd /media/ephemeral0/pipeline
-git clone git://github.com/joejimbo/bioknack.git
-git clone git://github.com/joejimbo/opacmo.git
+while [ ! -f '/var/www/lighttpd/bundle_transferred.tmp' ] ; do
+	sleep 5
+done
+tar xf /var/www/lighttpd/bundle.tar
 
 # Download PMC OA corpus, dictionaries, ontologies, etc.:
 opacmo/make_opacmo.sh freeze | tee -a /media/ephemeral0/pipeline/CACHE_LOG

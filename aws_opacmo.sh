@@ -3,7 +3,7 @@
 sed_regexp=-E
 
 # Journal prefixes for the worker spot-instances that will be started (on top of the one "cache" spot-instance):
-WORKERS=(A C E)
+WORKERS=(A BM B[^M])
 
 # AWS EC2 AMI to use:
 ami=ami-1624987f
@@ -12,6 +12,10 @@ ami=ami-1624987f
 instance_type=m1.xlarge
 
 # AWS EC2 zone in which the instances will be created:
+# Note that availability zones are different for each account, which means that
+# picking a fixed zone here does not imply that the same physical zone is used
+# across different user accounts.
+# (see http://docs.amazonwebservices.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html)
 zone=us-east-1a
 
 # Number of seconds to wait between checks whether the "cache" spot-instance is up:
@@ -20,8 +24,19 @@ SPOT_CHECK_INTERVAL=30
 # Number of seconds to wait between checks whether the "cache" spot-instance's interfaces have IPs yet:
 IP_WAIT=5
 
-# Number of seconds to wait between checks whether the "cache" spot-instance is done downloading:
+# Number of seconds to wait between checks whether the "cache" spot-instance is setup and done downloading:
+CACHE_SETUP_INTERVAL=10
 CACHE_CHECK_INTERVAL=120
+
+wait_for_completion() {
+	COMPLETE=0
+	while [ "$COMPLETE" = "0" ] ; do
+		echo -n '.'
+		sleep $2
+		COMPLETE=`wget -q -O - http://$PUBLIC_CACHE_IP/log.txt | grep -o $1 | wc -l | tr -d ' '`
+	done
+	echo ''
+}
 
 # Determine suitable price:
 N=0
@@ -44,15 +59,30 @@ echo "Median price: $MEDIAN_PRICE"
 echo ""
 echo "Suggest max. price for opacmo run: $MAX_PRICE (${FACTOR}x median price)"
 
-echo -n "Type 'yes' (without the quotes) to accept: "
-read user_agreement
+echo -n "Type 'yes' (without the quotes) to accept, or enter a max. price (e.g., 0.70): "
+read user_agreement_or_price
 
-if [ "$user_agreement" != 'yes' ] ; then
-	echo 'You declined the suggested price. Aborting.'
-	exit 1
+if [ "$user_agreement_or_price" != 'yes' ] ; then
+	if [ "`echo -n "$user_agreement_or_price" | grep -o -E '^[0-9]+\.[0-9]+$'`" != "$user_agreement_or_price\n" ] ; then
+		MAX_PRICE=$user_agreement_or_price
+		echo -n "Type 'yes' to accept your custom price of $MAX_PRICE and continue: "
+		read user_agreement
+		if [ "$user_agreement" != 'yes' ] ; then
+			echo 'You declined your suggested price. Aborting.'
+			exit 1
+		fi
+	else
+		echo 'You declined the suggested price. Aborting.'
+		exit 2
+	fi
 fi
 
 TIMESTAMP=`date +%Y%m%d_%H%M`
+echo "Creating 'opacmo_$TIMESTAMP' key pair..."
+ec2-create-keypair opacmo_$TIMESTAMP | sed '1d' > opacmo_$TIMESTAMP.pem
+chmod 600 opacmo_$TIMESTAMP.pem
+export AWS_KEY_PAIR=opacmo_$TIMESTAMP
+
 echo "Setting up 'opacmo_$TIMESTAMP' security group..."
 SECURITY_GROUP=`ec2-create-group --description 'opacmo security group' opacmo_$TIMESTAMP | cut -f 2 -d '	'`
 if [ "$SECURITY_GROUP" = '' ] ; then
@@ -90,14 +120,18 @@ echo ''
 echo "External IP: $PUBLIC_CACHE_IP"
 echo "Internal IP: $PRIVATE_CACHE_IP"
 
+echo "Waiting for instance setup completion..."
+wait_for_completion '\-\-\-opacmo\-\-\-setup\-complete\-\-\-' $CACHE_SETUP_INTERVAL
+
+echo 'Moving opacmo/bioknack bundle to the cache instance...'
+tar cf bundle.tar opacmo bioknack
+scp -i opacmo_$TIMESTAMP.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no bundle.tar ec2-user@$PUBLIC_CACHE_IP:/var/www/lighttpd
+echo "Bundle has been transferred." > bundle_transferred.tmp
+scp -i opacmo_$TIMESTAMP.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no bundle_transferred.tmp ec2-user@$PUBLIC_CACHE_IP:/var/www/lighttpd
+rm -f bundle.tar bundle_transferred.tmp
+
 echo "Waiting for instance to download PMC corpus, dictionaries/ontologies, etc."
-DOWNLOAD_COMPLETE=0
-while [ "$DOWNLOAD_COMPLETE" = "0" ] ; do
-	echo -n '.'
-	sleep $CACHE_CHECK_INTERVAL
-	DOWNLOAD_COMPLETE=`wget -q -O - http://$PUBLIC_CACHE_IP/index.html | grep -o '\-\-\-opacmo\-\-\-cache\-complete\-\-\-' | wc -l | tr -d ' '`
-done
-echo ''
+wait_for_completion '\-\-\-opacmo\-\-\-cache\-complete\-\-\-' $CACHE_CHECK_INTERVAL
 
 echo "Starting worker instances..."
 for prefix in ${WORKERS[@]} ; do

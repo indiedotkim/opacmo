@@ -27,11 +27,11 @@ echo "http_proxy = http://CACHE_IP_VAR:3128/" >> /etc/wgetrc
 echo "ftp_proxy = http://CACHE_IP_VAR:3128/" >> /etc/wgetrc
 echo "use_proxy = on" >> /etc/wgetrc
 
-# Get the text-mining pipeline software:
+# Get the text-mining pipeline software bundle:
 mkdir /media/ephemeral0/pipeline
 cd /media/ephemeral0/pipeline
-git clone git://github.com/joejimbo/bioknack.git
-git clone git://github.com/joejimbo/opacmo.git
+wget http://CACHE_IP_VAR/bundle.tar
+tar xf bundle.tar
 
 # Download PMC OA corpus, dictionaries, ontologies, etc.:
 opacmo/make_opacmo.sh all "${prefix}*" | tee -a /media/ephemeral0/pipeline/WORKER_${prefix}_LOG

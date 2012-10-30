@@ -313,7 +313,7 @@ if [ "$1" = 'all' ] || [ "$1" = 'ner' ] || [ "$1" = 'pner' ] || [ "$1" = 'sge' ]
 	else
 		touch STATE_PNER
 		if [ ! -d opacmo_data ] ; then mkdir opacmo_data ; fi
-		pmake_opacmo.sh $1
+		pmake_opacmo.sh $1 $prefix
 		rm -f STATE_PNER
 	fi
 fi
