@@ -17,6 +17,9 @@ zone=us-east-1a
 # Number of seconds to wait between checks whether the "cache" spot-instance is up:
 SPOT_CHECK_INTERVAL=30
 
+# Number of seconds to wait between checks whether the "cache" spot-instance's interfaces have IPs yet:
+IP_WAIT=5
+
 # Number of seconds to wait between checks whether the "cache" spot-instance is done downloading:
 CACHE_CHECK_INTERVAL=120
 
@@ -67,27 +70,39 @@ echo "Spot instance request filed: $SPOT_INSTANCE_REQUEST"
 
 echo "Waiting for instance to boot..."
 INSTANCE=
-while [ "$INSTANCE" = "" ] ; do
-	echo "...waiting..."
+while [ "$INSTANCE" = '' ] ; do
+	echo -n '.'
 	sleep $SPOT_CHECK_INTERVAL
 	INSTANCE=`ec2-describe-spot-instance-requests $SPOT_INSTANCE_REQUEST | cut -f 12 -d '	'`
 done
+echo ''
 
 echo "Instance started: $INSTANCE"
+echo "Getting IP addresses..."
+PUBLIC_CACHE_IP=
+while [ "$PUBLIC_CACHE_IP" = '' -o "$PRIVATE_CACHE_IP" = '' ] ; do
+	echo -n '.'
+	sleep $IP_WAIT
+	PUBLIC_CACHE_IP=`ec2-describe-instances $INSTANCE | grep -E "	$INSTANCE	" | cut -f 17 -d '	'`
+	PRIVATE_CACHE_IP=`ec2-describe-instances $INSTANCE | grep -E "	$INSTANCE	" | cut -f 18 -d '	'`
+done
+echo ''
+echo "External IP: $PUBLIC_CACHE_IP"
+echo "Internal IP: $PRIVATE_CACHE_IP"
 
 echo "Waiting for instance to download PMC corpus, dictionaries/ontologies, etc."
 DOWNLOAD_COMPLETE=0
 while [ "$DOWNLOAD_COMPLETE" = "0" ] ; do
-	echo "...waiting..."
+	echo -n '.'
 	sleep $CACHE_CHECK_INTERVAL
-	DOWNLOAD_COMPLETE=`ec2-get-console-output $INSTANCE | grep -o 'user-data: ---opacmo---cache-complete---' | wc -l | tr -d ' '`
+	DOWNLOAD_COMPLETE=`wget -q -O - http://$PUBLIC_CACHE_IP/index.html | grep -o '\-\-\-opacmo\-\-\-cache\-complete\-\-\-' | wc -l | tr -d ' '`
 done
+echo ''
 
 echo "Starting worker instances..."
-CACHE_IP=`ec2-describe-addresses | grep "	$INSTANCE	" | cut -f 2 -d '	'`
 for prefix in ${WORKERS[@]} ; do
 	echo "Starting worker for journal prefix: $prefix"
-	sed $sed_regexp "s/PREFIX_VAR/$prefix/g" opacmo/ec2/worker.sh | sed $sed_regexp "s/CACHE_IP_VAR/$CACHE_IP/g" > tmp/worker_$prefix.sh
+	sed $sed_regexp "s/PREFIX_VAR/$prefix/g" opacmo/ec2/worker.sh | sed $sed_regexp "s/CACHE_IP_VAR/$PRIVATE_CACHE_IP/g" > tmp/worker_$prefix.sh
 	ec2-request-spot-instances -g opacmo_$TIMESTAMP -p $MAX_PRICE -k $AWS_KEY_PAIR -z $zone -t $instance_type -b '/dev/sda2=ephemeral0' --user-data-file tmp/worker_$prefix.sh $ami
 done
 
