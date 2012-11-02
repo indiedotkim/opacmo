@@ -47,6 +47,9 @@ IP_WAIT=5
 CACHE_SETUP_INTERVAL=10
 CACHE_CHECK_INTERVAL=120
 
+# This function looks for a given phrase (param 1) to occur in the log-file
+# of the cache instance. If it does not occur, wait a number of seconds (param 2)
+# and then re-check.
 wait_for_completion() {
 	COMPLETE=0
 	while [ "$COMPLETE" = "0" ] ; do
@@ -56,6 +59,13 @@ wait_for_completion() {
 	done
 	echo ''
 }
+
+# Create a tmp directory, if it not already exists. This will be used to store
+# transient data, s.a. AWS pricing and computer generated scripts that are executed
+# on the "worker" instances:
+if [ ! -d tmp ] ; then
+	mkdir tmp
+fi
 
 # Determine suitable price:
 N=0
