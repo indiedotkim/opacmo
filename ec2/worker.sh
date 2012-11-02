@@ -4,17 +4,17 @@
 prefix=PREFIX_VAR
 
 # Use the ephemeral drive as workspace:
-chmod 777 /media/ephemeral0
 cd /media/ephemeral0
 
 # Install:
 # - Ruby 1.9 for better multi-threading performance than Ruby 1.8
 yum -y install ruby19
 yum -y install lighttpd
+yum -y install ftp
 yum -y install git
 
 # Magic? No! It is for logging console output properly -- including output of this script!
-exec > >(tee /var/www/lighttpd/index.html|tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+exec > >(tee /var/www/lighttpd/log.txt|tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
 service lighttpd start
 
@@ -33,14 +33,31 @@ cd /media/ephemeral0/pipeline
 wget http://CACHE_IP_VAR/bundle.tar
 tar xf bundle.tar
 
-# Download PMC OA corpus, dictionaries, ontologies, etc.:
-opacmo/make_opacmo.sh all "${prefix}*" | tee -a /media/ephemeral0/pipeline/WORKER_${prefix}_LOG
+# Download PMC OA corpus, dictionaries, ontologies, etc., but don't produce labels ("cache" does that):
+opacmo/make_opacmo.sh freeze "${prefix}*" | tee -a /media/ephemeral0/pipeline/WORKER_${prefix}_LOG
+opacmo/make_opacmo.sh get "${prefix}*" | tee -a /media/ephemeral0/pipeline/WORKER_${prefix}_LOG
+opacmo/make_opacmo.sh dictionaries "${prefix}*" | tee -a /media/ephemeral0/pipeline/WORKER_${prefix}_LOG
+opacmo/make_opacmo.sh pner "${prefix}*" | tee -a /media/ephemeral0/pipeline/WORKER_${prefix}_LOG
+opacmo/make_opacmo.sh tsv "${prefix}*" | tee -a /media/ephemeral0/pipeline/WORKER_${prefix}_LOG
 
-echo "put /media/ephemeral0/pipeline/WORKER_${prefix}_LOG" | ftp anonymous@CACHE_IP_VAR
+# Package logs and results into separate tar files:
+tar cf worker_log_${prefix}.tar fork_*/FORK_LOG VERSION_* WORKER_*
+tar cf worker_opacmo_data_${prefix}.tar opacmo_data
+
+# Uploads the packaged logs/results to the "cache" spot-instance:
+ftp -n -v CACHE_IP_VAR << EOT
+user anonymous x@y.z
+prompt
+cd uploads
+put worker_log_${prefix}.tar
+put worker_opacmo_data_${prefix}.tar
+bye
+bye
+EOT
 
 # Signal script completion:
-echo "---opacmo---worker-complete---(${prefix})---" | tee -a /media/ephemeral0/pipeline/WORKER_${prefix}_LOG
+echo "---opacmo---worker-complete---(${prefix})---"
 
-# And now, wait forever (for now):
-cat > /dev/null
+# And now, terminate the instance:
+halt
 

@@ -1,9 +1,28 @@
 #!/bin/bash
 
-sed_regexp=-E
+os=`uname`
+
+if [ "$os" != 'Darwin' ] && [ "$os" != 'Linux' ] ; then
+	echo "Sorry, but you have to run this script under Mac OS X or Linux."
+	exit 1
+fi
+
+# Use 'gawk' as default. Mac OS X's 'awk' works as well, but
+# for consistency I would suggest running `sudo port install gawk`.
+# The default Linux 'awk' does *not* work.
+if [ "$os" = 'Darwin' ] ; then
+	awk_interpreter=awk
+	sed_regexp=-E
+fi
+if [ "$os" = 'Linux' ] ; then
+	awk_interpreter=gawk
+	sed_regexp=-r
+fi
 
 # Journal prefixes for the worker spot-instances that will be started (on top of the one "cache" spot-instance):
-WORKERS=(A BM B[^M])
+#WORKERS=(A BM B[^M])
+# Note: Based on PMC download from 2012-10-31: approx. 105,000 .nxml files per worker
+WORKERS=([JQWXZ] [BKLS] [NOPUV] [AFGIY] [CDEHMRT])
 
 # AWS EC2 AMI to use:
 ami=ami-1624987f
@@ -47,7 +66,7 @@ for price in ` cat tmp/aws_prices.tmp` ; do
 	AVG_PRICE=`echo "$AVG_PRICE+$price" | bc`
 	let N=N+1
 done
-MEDIAN_PRICE=`awk '{ count[NR] = $1; } END { if (NR % 2) { print count[(NR + 1) / 2]; } else { print (count[(NR / 2)] + count[(NR / 2) + 1]) / 2.0; } }' tmp/aws_prices.tmp`
+MEDIAN_PRICE=`$awk_interpreter '{ count[NR] = $1; } END { if (NR % 2) { print count[(NR + 1) / 2]; } else { print (count[(NR / 2)] + count[(NR / 2) + 1]) / 2.0; } }' tmp/aws_prices.tmp`
 MEDIAN_PRICE=`echo "scale=3;$MEDIAN_PRICE/1" | bc | sed $sed_regexp 's/^\./0./'`
 AVG_PRICE=`echo "scale=3;$AVG_PRICE/$N" | bc | sed $sed_regexp 's/^\./0./'`
 MAX_PRICE=`echo "scale=3;$MEDIAN_PRICE*$FACTOR" | bc | sed $sed_regexp 's/^\./0./'`
@@ -69,11 +88,11 @@ if [ "$user_agreement_or_price" != 'yes' ] ; then
 		read user_agreement
 		if [ "$user_agreement" != 'yes' ] ; then
 			echo 'You declined your suggested price. Aborting.'
-			exit 1
+			exit 2
 		fi
 	else
 		echo 'You declined the suggested price. Aborting.'
-		exit 2
+		exit 3
 	fi
 fi
 
@@ -87,7 +106,7 @@ echo "Setting up 'opacmo_$TIMESTAMP' security group..."
 SECURITY_GROUP=`ec2-create-group --description 'opacmo security group' opacmo_$TIMESTAMP | cut -f 2 -d '	'`
 if [ "$SECURITY_GROUP" = '' ] ; then
 	echo "Could not create the security group 'opacmo' (via ec2-create-group). Does it already exist?"
-	exit 2
+	exit 4
 fi
 echo "Security group 'opacmo_$TIMESTAMP' created: $SECURITY_GROUP"
 ec2-authorize $SECURITY_GROUP -p 22
@@ -98,7 +117,7 @@ echo "Requesting spot instance (via ec2-request-spot-instances)..."
 SPOT_INSTANCE_REQUEST=`ec2-request-spot-instances -g opacmo_$TIMESTAMP -p $MAX_PRICE -k $AWS_KEY_PAIR -z $zone -t $instance_type -b '/dev/sda2=ephemeral0' --user-data-file opacmo/ec2/cache.sh $ami | cut -f 2 -d '	'`
 echo "Spot instance request filed: $SPOT_INSTANCE_REQUEST"
 
-echo "Waiting for instance to boot..."
+echo -n "Waiting for instance to boot."
 INSTANCE=
 while [ "$INSTANCE" = '' ] ; do
 	echo -n '.'
@@ -108,7 +127,7 @@ done
 echo ''
 
 echo "Instance started: $INSTANCE"
-echo "Getting IP addresses..."
+echo -n "Getting IP addresses."
 PUBLIC_CACHE_IP=
 while [ "$PUBLIC_CACHE_IP" = '' -o "$PRIVATE_CACHE_IP" = '' ] ; do
 	echo -n '.'
@@ -120,7 +139,7 @@ echo ''
 echo "External IP: $PUBLIC_CACHE_IP"
 echo "Internal IP: $PRIVATE_CACHE_IP"
 
-echo "Waiting for instance setup completion..."
+echo -n "Waiting for instance setup completion."
 wait_for_completion '\-\-\-opacmo\-\-\-setup\-complete\-\-\-' $CACHE_SETUP_INTERVAL
 
 echo 'Moving opacmo/bioknack bundle to the cache instance...'
@@ -130,7 +149,7 @@ echo "Bundle has been transferred." > bundle_transferred.tmp
 scp -i opacmo_$TIMESTAMP.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no bundle_transferred.tmp ec2-user@$PUBLIC_CACHE_IP:/var/www/lighttpd
 rm -f bundle.tar bundle_transferred.tmp
 
-echo "Waiting for instance to download PMC corpus, dictionaries/ontologies, etc."
+echo -n "Waiting for instance to download PMC corpus, dictionaries/ontologies, etc."
 wait_for_completion '\-\-\-opacmo\-\-\-cache\-complete\-\-\-' $CACHE_CHECK_INTERVAL
 
 echo "Starting worker instances..."
