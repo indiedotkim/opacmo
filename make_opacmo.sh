@@ -3,8 +3,8 @@
 os=`uname`
 
 if [ "$os" != 'Darwin' ] && [ "$os" != 'Linux' ] ; then
-        echo "Sorry, but you have to run this script under Mac OS X or Linux."
-        exit 1
+	echo "Sorry, but you have to run this script under Mac OS X or Linux."
+	exit 1
 fi
 
 # Use 'gawk' as default. Mac OS X's 'awk' works as well, but
@@ -148,7 +148,7 @@ run_plugins() {
 help_message() {
 	echo "Usage: make_opacmo.sh command [prefix]"
 	echo ""
-	echo "Single host options for 'command':"
+	echo "Options for 'command' (applicable only on local machines):"
 	echo "  all          : all of the options below in the listed order"
 	echo "  freeze       : jot down the current state of opacmo/bioknack for versioning"
 	echo "  get          : download gene and species databases, ontologies and PMC archive"
@@ -166,6 +166,10 @@ help_message() {
 	echo "  sge          : after extracing a bundle from the previous step, continues with"
 	echo "                 the steps 'pner' (cluster version), 'tsv', 'labels' and 'yoctogi'"
 	echo ""
+	echo "Amazon Elastic Compute Cloud (EC2) options for 'command':"
+	echo "  ec2ondemand  : execute 'all' on EC2 on-demand instances of fixed price"
+	echo "  ec2spot      : execute 'all' on EC2 spot instances of variable price"
+	echo ""
 	echo "The optinal parameter 'prefix' can be used to carry out a NER run on"
 	echo "a subset of PMC. For example, the prefix '\"BMC_*\"' restricts the NER run"
 	echo "to journal directories starting with 'BMC_'."
@@ -179,7 +183,7 @@ if [[ $# -lt 1 ]] || [[ $# -gt 2 ]] ; then
 	exit 1
 fi
 
-if [ "$1" != 'all' ] && [ "$1" != 'freeze' ] && [ "$1" != 'get' ] && [ "$1" != 'dictionaries' ] && [ "$1" != 'ner' ] && [ "$1" != 'pner' ] && [ "$1" != 'tsv' ] && [ "$1" != 'labels' ] && [ "$1" != 'yoctogi' ]  && [ "$1" != 'bundle' ] && [ "$1" != 'sge' ] && [ "$1" != 'ec2' ] && [ "$1" != 'pluginexample' ] ; then
+if [ "$1" != 'all' ] && [ "$1" != 'freeze' ] && [ "$1" != 'get' ] && [ "$1" != 'dictionaries' ] && [ "$1" != 'ner' ] && [ "$1" != 'pner' ] && [ "$1" != 'tsv' ] && [ "$1" != 'labels' ] && [ "$1" != 'yoctogi' ]  && [ "$1" != 'bundle' ] && [ "$1" != 'sge' ] && [ "$1" != 'ec2ondemand' ] && [ "$1" != 'ec2spot' ] && [ "$1" != 'pluginexample' ] ; then
 	help_message
 	exit 1
 fi
@@ -216,7 +220,7 @@ if [ "$1" = 'pluginexample' ] ; then
 	rm -f STATE_PLUGINEXAMPLE
 fi
 
-if [ "$1" = 'all' ] || [ "$1" = 'freeze' ] || [ "$1" = 'bundle' ] || [ "$1" = 'ec2' ] ; then
+if [ "$1" = 'all' ] || [ "$1" = 'freeze' ] || [ "$1" = 'bundle' ] || [ "$1" = 'ec2ondemand' ] || [ "$1" = 'ec2spot' ] ; then
 	touch STATE_FREEZE
 	echo "Freezing current version information..."
 
@@ -242,16 +246,16 @@ if [ "$1" = 'sge' ] ; then
 	rm -f STATE_FREEZE
 fi
 
-if [ "$1" = 'ec2' ] ; then
+if [ "$1" = 'ec2ondemand' ] || [ "$1" = 'ec2spot' ] ; then
 	touch STATE_FREEZE
 	ls | grep 'ec2-api-tools-' > VERSION_EC2_TOOLS
 	echo "$ami" > VERSION_AMI
 	rm -f STATE_FREEZE
 fi
 
-if [ "$1" = 'ec2' ] ; then
+if [ "$1" = 'ec2ondemand' ] || [ "$1" = 'ec2spot' ] ; then
 	touch STATE_EC2_BOOT
-	aws_opacmo.sh
+	aws_opacmo.sh `echo -n "$1" | sed $sed_regexp 's/^ec2//'`
 	rm -f STATE_EC2_BOOT
 fi
 
