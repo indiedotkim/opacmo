@@ -80,7 +80,7 @@ if [ "$1" != 'ondemand' ] && [ "$1" != 'spot' ] ; then
 	exit 2
 fi
 
-instance_type=$1
+pricing=$1
 
 # Create a tmp directory, if it not already exists. This will be used to store
 # transient data, s.a. AWS pricing and computer generated scripts that are executed
@@ -89,7 +89,7 @@ if [ ! -d tmp ] ; then
 	mkdir tmp
 fi
 
-if [ "$instance_type" = 'spot' ] ; then
+if [ "$pricing" = 'spot' ] ; then
 	# Determine suitable price:
 	N=0
 	FACTOR=1.5
@@ -147,7 +147,7 @@ ec2-authorize $SECURITY_GROUP -p 22
 ec2-authorize $SECURITY_GROUP -p 80
 ec2-authorize $SECURITY_GROUP -o $SECURITY_GROUP -u $AWS_ACCOUNT_ID
 
-if [ "$instance_type" = 'spot' ] ; then
+if [ "$pricing" = 'spot' ] ; then
 	echo "Requesting spot instance (via ec2-request-spot-instances)..."
 	SPOT_INSTANCE_REQUEST=`ec2-request-spot-instances -g opacmo_$TIMESTAMP -p $MAX_PRICE -k $AWS_KEY_PAIR -z $zone -t $instance_type -b '/dev/sda2=ephemeral0' --user-data-file opacmo/ec2/cache.sh $ami | cut -f 2 -d '	'`
 	echo "Spot instance request filed: $SPOT_INSTANCE_REQUEST"
@@ -162,7 +162,7 @@ if [ "$instance_type" = 'spot' ] ; then
 	echo ''
 fi
 
-if [ "$instance_type" = 'ondemand' ] ; then
+if [ "$pricing" = 'ondemand' ] ; then
 	echo "Requesting on-demand instance (via ec2-run-instances)..."
 	INSTANCE=`ec2-run-instances --instance-initiated-shutdown-behavior terminate -g opacmo_$TIMESTAMP -k $AWS_KEY_PAIR -z $zone -t $instance_type -b '/dev/sda2=ephemeral0' --user-data-file opacmo/ec2/cache.sh $ami | cut -f 2 -d '	'`
 fi
@@ -198,11 +198,11 @@ for prefix in ${WORKERS[@]} ; do
 	echo "Starting worker for journal prefix: $prefix"
 	sed $sed_regexp "s/PREFIX_VAR/$prefix/g" opacmo/ec2/worker.sh | sed $sed_regexp "s/CACHE_IP_VAR/$PRIVATE_CACHE_IP/g" > tmp/worker_$prefix.sh
 
-	if [ "$instance_type" = 'spot' ] ; then
+	if [ "$pricing" = 'spot' ] ; then
 		ec2-request-spot-instances -g opacmo_$TIMESTAMP -p $MAX_PRICE -k $AWS_KEY_PAIR -z $zone -t $instance_type -b '/dev/sda2=ephemeral0' --user-data-file tmp/worker_$prefix.sh $ami
 	fi
 
-	if [ "$instance_type" = 'ondemand' ] ; then
+	if [ "$pricing" = 'ondemand' ] ; then
 		ec2-run-instances --instance-initiated-shutdown-behavior terminate -g opacmo_$TIMESTAMP -k $AWS_KEY_PAIR -z $zone -t $instance_type -b '/dev/sda2=ephemeral0' --user-data-file tmp/worker_$prefix.sh $ami
 	fi
 done
