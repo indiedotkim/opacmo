@@ -164,7 +164,7 @@ fi
 
 if [ "$pricing" = 'ondemand' ] ; then
 	echo "Requesting on-demand instance (via ec2-run-instances)..."
-	INSTANCE=`ec2-run-instances --instance-initiated-shutdown-behavior terminate -g opacmo_$TIMESTAMP -k $AWS_KEY_PAIR -z $zone -t $instance_type -b '/dev/sda2=ephemeral0' --user-data-file opacmo/ec2/cache.sh $ami | cut -f 2 -d '	'`
+	INSTANCE=`ec2-run-instances --instance-initiated-shutdown-behavior terminate -g opacmo_$TIMESTAMP -k $AWS_KEY_PAIR -z $zone -t $instance_type -b '/dev/sda2=ephemeral0' --user-data-file opacmo/ec2/cache.sh $ami | tail -n+2 | cut -f 2 -d '	'`
 fi
 
 echo "Instance started: $INSTANCE"
