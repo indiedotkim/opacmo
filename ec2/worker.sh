@@ -49,6 +49,7 @@ ftp -n -v CACHE_IP_VAR << EOT
 user anonymous x@y.z
 prompt
 cd uploads
+binary
 put worker_log_${prefix}.tar
 put worker_opacmo_data_${prefix}.tar
 bye
