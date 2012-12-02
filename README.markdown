@@ -47,14 +47,13 @@ Specific output of grid engine jobs is written into the respective `fork_*` dire
 
 ### Running on Amazon Elastic Compute Cloud
 
-_Provisional_
+_Important:_ You are running opacmo on Amazon's Elastic Compute Cloud at **your own financial risk**. If you are not familiar with Amazon's billing procedures, do not use opacmo's cloud computing pipeline.
+
+##### Installation and Configuration of EC2 API Tools
 
     wget 'http://s3.amazonaws.com/ec2-downloads/ec2-api-tools.zip'
     unzip ec2-api-tools.zip
     export PATH=$PATH:`pwd`/ec2-api-tools-1.6.0.0/bin
-
-Configuring EC2 API Tools
-
     export EC2_HOME=`pwd`/ec2-api-tools-1.6.0.0
     # See: https://portal.aws.amazon.com/gp/aws/securityCredentials
     # AWS_ACCOUNT_ID looks like '1234-5678-9012'
@@ -66,9 +65,32 @@ Configuring EC2 API Tools
     export EC2_PRIVATE_KEY=pk-....pem
     export EC2_CERT=cert-....pem
 
-Executing the Text-Mining Pipeline
+##### Executing the Text-Mining Pipeline on EC2 instances
 
-    opacmo/aws_opacmo.sh
+    opacmo/make_opacmo.sh ec2spot | tee LOCAL_LOG
+
+If you rather prefer the more expensive, but more reliable "on-demand" instances, use the parameter `ec2ondemand` instead of `ec2spot` above.
+
+##### Moving Text-Mining Results Off the Cloud
+
+    scp -i KEY.pem ec2-user@CACHE_INSTANCE_URL:/media/ephemeral0/{ftp/uploads/*,pipeline/*.tar,pipeline/{C*,V*}} .
+    for archive in worker_opacmo_data_*.tar.gz ; do
+        tar xzf $archive ; for batch in opacmo_data/[0-9]* ; do
+            mv $batch "opacmo_data/`basename $archive .tar.gz | sed 's/worker_opacmo_data_//'`_`basename $batch`"
+        done
+    done
+    tar xf cache_labels*.tar
+
+##### Loading Text-Mining Results into Yoctogi
+
+This step is optional and only of relevance when you are importing the text-mining results into a Yoctogi database.
+
+    scp -r -i KEY.pem ec2-user@CACHE_INSTANCE_URL:/media/ephemeral0/pipeline/dictionaries .
+    scp -i KEY.pem ec2-user@CACHE_INSTANCE_URL:/media/ephemeral0/pipeline/tmp/species tmp
+    opacmo/make_opacmo.sh tsv
+    opacmo/make_opacmo.sh yoctogi
+    sudo su postgres
+    opacmo/load_opacmo.sh
 
 #### Java Installation on Mac OS X
 
