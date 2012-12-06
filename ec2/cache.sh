@@ -28,7 +28,7 @@ mkdir /media/ephemeral0/ftp
 chmod 755 /media/ephemeral0/ftp
 mkdir /media/ephemeral0/ftp/uploads
 chmod 777 /media/ephemeral0/ftp/uploads
-echo -e "anonymous_enable=YES\nanon_root=/media/ephemeral0/ftp\nlocal_enable=YES\nwrite_enable=YES\nlocal_umask=022\nanon_upload_enable=YES\nanon_mkdir_write_enable=YES\nconnect_from_port_20=YES\nlisten=YES\npam_service_name=vsftpd\ntcp_wrappers=YES" > /etc/vsftpd/vsftpd.conf
+echo -e "anonymous_enable=YES\nanon_root=/media/ephemeral0/ftp\nlocal_enable=YES\nwrite_enable=YES\nanon_umask=022\nlocal_umask=022\nanon_upload_enable=YES\nanon_mkdir_write_enable=YES\nconnect_from_port_20=YES\nlisten=YES\npam_service_name=vsftpd\ntcp_wrappers=YES" > /etc/vsftpd/vsftpd.conf
 service vsftpd start
 
 # Configure squid:
