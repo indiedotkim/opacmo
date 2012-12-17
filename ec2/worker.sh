@@ -44,14 +44,18 @@ opacmo/make_opacmo.sh tsv "${prefix}*" | tee -a /media/ephemeral0/pipeline/WORKE
 tar cf worker_log_${prefix}.tar fork_*/FORK_LOG VERSION_* WORKER_*
 tar cf worker_opacmo_data_${prefix}.tar opacmo_data
 
+# Compress the tar files:
+gzip worker_log_${prefix}.tar
+gzip worker_opacmo_data_${prefix}.tar
+
 # Uploads the packaged logs/results to the "cache" spot-instance:
 ftp -n -v CACHE_IP_VAR << EOT
 user anonymous x@y.z
 prompt
 cd uploads
 binary
-put worker_log_${prefix}.tar
-put worker_opacmo_data_${prefix}.tar
+put worker_log_${prefix}.tar.gz
+put worker_opacmo_data_${prefix}.tar.gz
 bye
 bye
 EOT
