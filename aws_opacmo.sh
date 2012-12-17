@@ -22,13 +22,13 @@ fi
 # Journal prefixes for the worker spot-instances that will be started (on top of the one "cache" spot-instance):
 #WORKERS=(A BM B[^M])
 # Note: Based on PMC download from 2012-10-31: approx. 105,000 .nxml files per worker
-WORKERS=([JQWXZ] [BKLS] [NOPUV] [AFGIY] [CDEHMRT])
+WORKERS=([JNQWXZ] [BKLSU] P [AFGIOY] [CDEHMRTV])
 
 # AWS EC2 AMI to use:
 ami=ami-1624987f
 
 # AWS EC2 instance type:
-instance_type=m1.xlarge
+instance_type=m2.2xlarge
 
 # AWS EC2 zone in which the instances will be created:
 # Note that availability zones are different for each account, which means that
@@ -149,7 +149,7 @@ ec2-authorize $SECURITY_GROUP -o $SECURITY_GROUP -u $AWS_ACCOUNT_ID
 
 if [ "$pricing" = 'spot' ] ; then
 	echo "Requesting spot instance (via ec2-request-spot-instances)..."
-	SPOT_INSTANCE_REQUEST=`ec2-request-spot-instances -g opacmo_$TIMESTAMP -p $MAX_PRICE -k $AWS_KEY_PAIR -z $zone -t $instance_type -b '/dev/sda2=ephemeral0' --user-data-file opacmo/ec2/cache.sh $ami | cut -f 2 -d '	'`
+	SPOT_INSTANCE_REQUEST=`ec2-request-spot-instances -g opacmo_$TIMESTAMP -p $MAX_PRICE -k $AWS_KEY_PAIR -z $zone -t $instance_type -b '/dev/sda2=ephemeral0' --user-data-file opacmo/ec2/cache.sh $ami | grep -E 'sir-.+' | cut -f 2 -d '	'`
 	echo "Spot instance request filed: $SPOT_INSTANCE_REQUEST"
 
 	echo -n "Waiting for instance to boot."
