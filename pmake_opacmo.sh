@@ -12,7 +12,7 @@ batchsize=2000
 # fork more instances than given here just because the 'scheduler' is not aware
 # of a freshly spawned process.
 if [ "$environment" != 'sge' ] ; then
-	max_processes=4
+	max_processes=8
 else
 	max_processes=100
 fi
