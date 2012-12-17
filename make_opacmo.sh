@@ -368,7 +368,7 @@ if [ "$1" = 'all' ] || [ "$1" = 'tsv' ] || [ "$1" = 'sge' ] ; then
 			cp $terms_chebi.tmp ${out}__terms_chebi_processed.tsv
 
 			# Keep track of the PMC IDs:
-			cut -f 1 ${out}__*_processed.tsv | uniq | sort | uniq > ${out}__pmcids_processed.tsv
+			cut -f 1 "${out}"__*_processed.tsv | uniq | sort | uniq > ${out}__pmcids_processed.tsv
 		fi
 
 		rm -f $genes.tmp $species.tmp $species.tmp2 $terms.tmp $tmp/*.tmp
