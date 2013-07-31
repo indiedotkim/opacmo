@@ -46,6 +46,7 @@ body {
 }
 
 .content {
+	position: absolute;
 	padding-top: 18px;
 	padding-bottom: 18px;
 	padding-left: 35px;
@@ -278,6 +279,8 @@ a:hover {
 #news {
 	margin-top: 18px;
 	font-family: 'Courier New', Courier, monospace;
+	overflow: scroll;
+	height: 300px;
 }
 
 .date {
